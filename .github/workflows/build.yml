@@ -8,9 +8,28 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y cmake ninja-build
+
+      - name: Setup Android NDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Geode CLI
+        run: |
+          curl -L https://github.com/geode-sdk/cli/releases/download/v3.7.4/geode-cli-v3.7.4-linux.zip -o geode-cli.zip
+          unzip geode-cli.zip
+          sudo mv geode /usr/local/bin/geode
+          geode sdk install
 
       - name: Build
-        uses: geode-sdk/build-geode-mod@v1
+        run: |
+          geode build --platform android64
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
         with:
-          target: android64
+          name: instant-death-mod
+          path: build/*.geode 
