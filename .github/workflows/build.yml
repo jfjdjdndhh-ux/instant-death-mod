@@ -15,7 +15,7 @@ jobs:
 
       - name: Setup SDK
         run: |
-          geode sdk install --path ~/.geode/sdk
+          geode sdk install
           geode sdk update
 
       - name: Install NDK
