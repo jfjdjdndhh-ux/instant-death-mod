@@ -4,6 +4,6 @@ using namespace geode::prelude;
 class $modify(PlayLayer) {
     void startGame() {
         PlayLayer::startGame();
-        this->m_player1->killPlayer();
+        this->m_player1->death(nullptr);
     }
 };
