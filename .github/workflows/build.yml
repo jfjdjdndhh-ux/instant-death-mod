@@ -11,6 +11,6 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Build
-        uses: geode-sdk/build-geode-mod@v2
+        uses: geode-sdk/build-geode-mod@v1
         with:
           target: android64
