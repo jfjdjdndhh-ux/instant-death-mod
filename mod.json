@@ -1,0 +1,8 @@
+{
+    "geode": "3.0.0",
+    "id": "myname.instantdeath",
+    "name": "Instant Death",
+    "version": "1.0.0",
+    "developer": "myname",
+    "description": "Die instantly on level start"
+}
