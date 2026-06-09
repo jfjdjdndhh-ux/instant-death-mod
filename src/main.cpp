@@ -5,6 +5,6 @@ using namespace geode::prelude;
 class $modify(PlayLayer) {
     void startGame() {
         PlayLayer::startGame();
-        this->m_player1->playDeathEffect();
+        this->destroyPlayer(this->m_player1, nullptr);
     }
 };
