@@ -5,6 +5,8 @@ using namespace geode::prelude;
 extern bool g_noclip;
 extern bool g_farm;
 extern bool g_safeMode;
+extern bool g_instantComplete;
+extern bool g_allModesPlatformer;
 extern float g_speed;
 extern int g_deaths;
 extern float g_accuracy;
