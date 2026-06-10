@@ -36,7 +36,7 @@ public:
         m_var = &var;
 
         // Фон строки
-        m_bg = CCLayerColor::create({255,255,255, var ? 30u : 0u}, width, 22);
+        m_bg = CCLayerColor::create({255,255,255, (GLubyte)(var ? 30 : 0)}, width, 22);
         m_bg->setPosition({0, 0});
         this->addChild(m_bg);
 
@@ -240,7 +240,7 @@ public:
         return nullptr;
     }
 
-    bool init() {
+    bool init() override {
         if (!CCLayer::init()) return false;
         g_menuOpen = true;
 
