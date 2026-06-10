@@ -4,22 +4,25 @@
 #include <Geode/modify/MenuLayer.hpp>
 using namespace geode::prelude;
 
-bool noclipEnabled = false;
-float speedMultiplier = 1.0f;
-bool farmEnabled = false;
-bool menuOpen = false;
+// Из menu.cpp
+extern bool g_noclip;
+extern bool g_farm;
+extern bool g_safeMode;
+extern float g_speed;
+extern int g_deaths;
+extern float g_accuracy;
+extern bool g_menuOpen;
+class MegaHackButton;
 
-// ===== КОЛОНКА =====
-class HackColumn : public CCNode {
+// Инфо слева сверху
+class NoclipInfo : public CCNode {
 public:
-    std::string title;
-    CCLayerColor* bg;
-    CCMenu* menu;
-    float yOffset = 0;
+    CCLabelBMFont* m_deathsLabel;
+    CCLabelBMFont* m_accLabel;
 
-    static HackColumn* create(std::string title, float x, float y) {
-        auto ret = new HackColumn();
-        if (ret && ret->initWithTitle(title, x, y)) {
+    static NoclipInfo* create() {
+        auto ret = new NoclipInfo();
+        if (ret && ret->init()) {
             ret->autorelease();
             return ret;
         }
@@ -27,216 +30,86 @@ public:
         return nullptr;
     }
 
-    bool initWithTitle(std::string t, float x, float y) {
+    bool init() {
         if (!CCNode::init()) return false;
-        title = t;
-        this->setPosition({x, y});
+        auto win = CCDirector::get()->getWinSize();
 
-        bg = CCLayerColor::create({20, 20, 40, 220}, 160, 300);
-        bg->setPosition({0, 0});
-        this->addChild(bg);
+        m_deathsLabel = CCLabelBMFont::create("Deaths: 0", "chatFont.fnt");
+        m_deathsLabel->setScale(0.5f);
+        m_deathsLabel->setAnchorPoint({0, 0.5f});
+        m_deathsLabel->setPosition({5, win.height - 60});
+        this->addChild(m_deathsLabel);
 
-        auto titleLbl = CCLabelBMFont::create(t.c_str(), "bigFont.fnt");
-        titleLbl->setScale(0.4f);
-        titleLbl->setColor({100, 200, 255});
-        titleLbl->setPosition({80, 285});
-        this->addChild(titleLbl);
+        m_accLabel = CCLabelBMFont::create("Acc: 100%", "chatFont.fnt");
+        m_accLabel->setScale(0.5f);
+        m_accLabel->setAnchorPoint({0, 0.5f});
+        m_accLabel->setPosition({5, win.height - 75});
+        this->addChild(m_accLabel);
 
-        menu = CCMenu::create();
-        menu->setPosition({0, 0});
-        this->addChild(menu);
-
-        yOffset = 265;
+        this->schedule(schedule_selector(NoclipInfo::update2), 0.1f);
         return true;
     }
 
-    void addToggle(std::string name, bool& var, CCObject* target, SEL_MenuHandler callback) {
-        auto lbl = CCLabelBMFont::create(name.c_str(), "chatFont.fnt");
-        lbl->setScale(0.55f);
-        lbl->setAnchorPoint({0, 0.5f});
-        lbl->setPosition({5, yOffset});
-        this->addChild(lbl);
-
-        auto toggle = CCMenuItemToggler::createWithStandardSprites(
-            target, callback, 0.55f
-        );
-        toggle->setPosition({145, yOffset});
-        toggle->toggle(var);
-        menu->addChild(toggle);
-
-        yOffset -= 28;
+    void update2(float) {
+        m_deathsLabel->setString(
+            fmt::format("Deaths: {}", g_deaths).c_str());
+        m_accLabel->setString(
+            fmt::format("Acc: {:.1f}%", g_accuracy).c_str());
     }
 };
 
-// ===== ГЛАВНОЕ МЕНЮ =====
-class MegahackMenu : public CCLayer {
-public:
-    static MegahackMenu* create() {
-        auto ret = new MegahackMenu();
-        if (ret && ret->init()) {
-            ret->autorelease();
-            return ret;
-        }
-        delete ret;
-        return nullptr;
-    }
-
-    bool init() {
-        if (!CCLayer::init()) return false;
-        menuOpen = true;
-
-        auto winSize = CCDirector::get()->getWinSize();
-
-        // Тёмный фон
-        auto overlay = CCLayerColor::create({0, 0, 0, 150},
-            winSize.width, winSize.height);
-        this->addChild(overlay);
-
-        // Заголовок
-        auto title = CCLabelBMFont::create("MEGA HACK", "goldFont.fnt");
-        title->setScale(0.9f);
-        title->setPosition({winSize.width/2, winSize.height - 25});
-        this->addChild(title);
-
-        auto ver = CCLabelBMFont::create("v1.0 by myname", "chatFont.fnt");
-        ver->setScale(0.5f);
-        ver->setColor({150, 150, 150});
-        ver->setPosition({winSize.width/2, winSize.height - 45});
-        this->addChild(ver);
-
-        float startX = 20;
-        float startY = winSize.height - 65;
-
-        // Колонка 1 - Gameplay
-        auto col1 = HackColumn::create("Gameplay", startX, startY - 300);
-        col1->addToggle("Noclip", noclipEnabled, this,
-            menu_selector(MegahackMenu::onNoclip));
-        col1->addToggle("Attempt Farm", farmEnabled, this,
-            menu_selector(MegahackMenu::onFarm));
-        this->addChild(col1);
-
-        // Колонка 2 - Speed
-        auto col2 = HackColumn::create("Speedhack", startX + 170, startY - 300);
-        
-        auto speedLbl = CCLabelBMFont::create("Speed:", "chatFont.fnt");
-        speedLbl->setScale(0.55f);
-        speedLbl->setAnchorPoint({0, 0.5f});
-        speedLbl->setPosition({startX + 175, startY - 80});
-        this->addChild(speedLbl);
-
-        m_speedLabel = CCLabelBMFont::create("1.0x", "chatFont.fnt");
-        m_speedLabel->setScale(0.55f);
-        m_speedLabel->setPosition({startX + 280, startY - 80});
-        this->addChild(m_speedLabel);
-
-        auto colMenu = CCMenu::create();
-        colMenu->setPosition({0, 0});
-        this->addChild(colMenu);
-
-        auto minusBtn = CCMenuItemSpriteExtra::create(
-            CCSprite::createWithSpriteFrameName("GJ_deleteBtn_001.png"),
-            this, menu_selector(MegahackMenu::onSpeedDown)
-        );
-        minusBtn->setPosition({startX + 305, startY - 80});
-        minusBtn->setScale(0.5f);
-        colMenu->addChild(minusBtn);
-
-        auto plusBtn = CCMenuItemSpriteExtra::create(
-            CCSprite::createWithSpriteFrameName("GJ_plus2Btn_001.png"),
-            this, menu_selector(MegahackMenu::onSpeedUp)
-        );
-        plusBtn->setPosition({startX + 325, startY - 80});
-        plusBtn->setScale(0.5f);
-        colMenu->addChild(plusBtn);
-
-        this->addChild(col2);
-
-        // Кнопка закрыть
-        auto closeBtn = CCMenuItemSpriteExtra::create(
-            CCSprite::createWithSpriteFrameName("GJ_closeBtn_001.png"),
-            this, menu_selector(MegahackMenu::onClose)
-        );
-        auto closeMenu = CCMenu::create();
-        closeMenu->setPosition({0, 0});
-        closeBtn->setPosition({winSize.width - 20, winSize.height - 20});
-        closeMenu->addChild(closeBtn);
-        this->addChild(closeMenu);
-
-        this->setTouchEnabled(true);
-        return true;
-    }
-
-    CCLabelBMFont* m_speedLabel;
-
-    void onNoclip(CCObject*) { noclipEnabled = !noclipEnabled; }
-    void onFarm(CCObject*) { farmEnabled = !farmEnabled; }
-
-    void onSpeedUp(CCObject*) {
-        speedMultiplier = MIN(speedMultiplier + 0.1f, 5.0f);
-        m_speedLabel->setString(fmt::format("{:.1f}x", speedMultiplier).c_str());
-    }
-
-    void onSpeedDown(CCObject*) {
-        speedMultiplier = MAX(speedMultiplier - 0.1f, 0.1f);
-        m_speedLabel->setString(fmt::format("{:.1f}x", speedMultiplier).c_str());
-    }
-
-    void onClose(CCObject*) {
-        menuOpen = false;
-        this->removeFromParent();
-    }
-};
-
-// ===== КНОПКА =====
-class MegahackButton : public CCLayer {
-public:
-    static MegahackButton* create() {
-        auto ret = new MegahackButton();
-        if (ret && ret->init()) {
-            ret->autorelease();
-            return ret;
-        }
-        delete ret;
-        return nullptr;
-    }
-
-    bool init() {
-        if (!CCLayer::init()) return false;
-        auto winSize = CCDirector::get()->getWinSize();
-        auto menu = CCMenu::create();
-        menu->setPosition({0, 0});
-        this->addChild(menu);
-
-        auto btn = CCMenuItemSpriteExtra::create(
-            CCSprite::createWithSpriteFrameName("GJ_menuBtn_001.png"),
-            this, menu_selector(MegahackButton::onOpen)
-        );
-        btn->setPosition({40, winSize.height - 40});
-        btn->setScale(0.7f);
-        menu->addChild(btn);
-        return true;
-    }
-
-    void onOpen(CCObject*) {
-        if (menuOpen) return;
-        CCDirector::get()->getRunningScene()->addChild(
-            MegahackMenu::create(), 999
-        );
-    }
-};
-
-// ===== ХУКИ =====
 class $modify(MyPlayLayer, PlayLayer) {
+    struct Fields {
+        int totalFrames = 0;
+        int deathFrames = 0;
+        NoclipInfo* infoNode = nullptr;
+        bool started = false;
+    };
+
     void destroyPlayer(PlayerObject* p, GameObject* o) {
-        if (!noclipEnabled)
+        if (g_noclip) {
+            g_deaths++;
+            // Пересчёт точности
+            m_fields->deathFrames++;
+            if (m_fields->totalFrames > 0) {
+                g_accuracy = 100.0f * (1.0f - 
+                    (float)m_fields->deathFrames / m_fields->totalFrames);
+            }
+            return;
+        }
+        if (g_farm) {
             PlayLayer::destroyPlayer(p, o);
+            return;
+        }
+        PlayLayer::destroyPlayer(p, o);
     }
 
     void startGame() {
         PlayLayer::startGame();
-        this->addChild(MegahackButton::create(), 999);
-        if (farmEnabled)
-            this->scheduleOnce(schedule_selector(MyPlayLayer::killMe), 0.1f);
+        g_deaths = 0;
+        g_accuracy = 100.0f;
+        m_fields->totalFrames = 0;
+        m_fields->deathFrames = 0;
+
+        // Кнопка меню
+        auto btn = MegaHackButton::create();
+        this->addChild(btn, 999);
+
+        // Инфо ноуклипа
+        auto info = NoclipInfo::create();
+        m_fields->infoNode = info;
+        this->addChild(info, 999);
+
+        // Фарм попыток
+        if (g_farm && !g_noclip) {
+            this->scheduleOnce(
+                schedule_selector(MyPlayLayer::killMe), 0.1f);
+        }
+    }
+
+    void update(float dt) {
+        PlayLayer::update(dt);
+        m_fields->totalFrames++;
     }
 
     void killMe(float) {
@@ -244,8 +117,37 @@ class $modify(MyPlayLayer, PlayLayer) {
     }
 };
 
+// Speedhack
 class $modify(CCScheduler) {
     void update(float dt) {
-        CCScheduler::update(dt * speedMultiplier);
+        CCScheduler::update(dt * g_speed);
+    }
+};
+
+// Кнопка в главном меню
+class $modify(MenuLayer) {
+    bool init() {
+        if (!MenuLayer::init()) return false;
+
+        auto win = CCDirector::get()->getWinSize();
+        auto menu = CCMenu::create();
+        menu->setPosition({0, 0});
+
+        auto spr = CCSprite::createWithSpriteFrameName("GJ_menuBtn_001.png");
+        spr->setScale(0.6f);
+
+        auto btn = CCMenuItemSpriteExtra::create(
+            spr, this, menu_selector(MenuLayer::onMegahack));
+        btn->setPosition({30, win.height - 30});
+        menu->addChild(btn);
+
+        this->addChild(menu, 999);
+        return true;
+    }
+
+    void onMegahack(CCObject*) {
+        if (g_menuOpen) return;
+        CCDirector::get()->getRunningScene()->addChild(
+            MegaHackMenu::create(), 999);
     }
 };
