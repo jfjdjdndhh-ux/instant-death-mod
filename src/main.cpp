@@ -1,4 +1,5 @@
 #include <Geode/Geode.hpp>
+#include "menu.hpp"
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/CCScheduler.hpp>
 #include <Geode/modify/MenuLayer.hpp>
